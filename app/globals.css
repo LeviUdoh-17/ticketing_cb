@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Light mode only. `dark:` classes now apply only under a `.dark` class,
+   which is never set, so the page stays light even when the visitor's
+   device is in dark mode. To bring dark mode back, delete this line and
+   restore the prefers-color-scheme block. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  /* Keeps native controls (selects, scrollbars, autofill) light too. */
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
