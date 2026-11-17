@@ -22,7 +22,13 @@ export async function createTicket(input: TicketInput): Promise<CreatedTicket> {
 
   const body = JSON.stringify({
     subject: input.subject,
-    description: toHtml(input.description),
+    // Zoho reuses an existing contact (matched by email, shared across all
+    // departments) and ignores the name we send for it, so the name typed in
+    // the form would otherwise be lost. Put it on the ticket itself.
+    description:
+      `<b>Submitted by:</b> ${toHtml(input.name)} (${toHtml(input.email)})<br>` +
+      `<b>Platform:</b> ${toHtml(SOURCE_LABELS[input.source])}<br><br>` +
+      toHtml(input.description),
     departmentId: ZOHO_TECH_DEPARTMENT_ID,
     priority: input.priority,
     category: input.category,
