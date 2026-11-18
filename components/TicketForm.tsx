@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import {
   createTicketAction,
   type CreateTicketState,
@@ -13,7 +13,7 @@ import {
   type Source,
   type TicketField,
 } from "@/lib/validation";
-import { Turnstile } from "./Turnstile";
+import { Turnstile, type TurnstileStatus } from "./Turnstile";
 
 const initialState: CreateTicketState = { status: "idle" };
 
@@ -37,6 +37,11 @@ export function TicketForm({
     createTicketAction,
     initialState,
   );
+  // Without a site key (local dev) there's no widget, so nothing to wait for.
+  const [check, setCheck] = useState<TurnstileStatus>(
+    turnstileSiteKey ? "pending" : "ready",
+  );
+  const blocked = pending || check !== "ready";
 
   if (state.status === "success") {
     return (
@@ -157,21 +162,32 @@ export function TicketForm({
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      {turnstileSiteKey && <Turnstile siteKey={turnstileSiteKey} />}
+      {turnstileSiteKey && <Turnstile siteKey={turnstileSiteKey} onStatus={setCheck} />}
+
+      {check === "error" && (
+        <p role="alert" className="text-sm text-red-600">
+          The security check couldn&apos;t load. Please refresh the page and try again. If it
+          keeps happening, try turning off ad blockers or using another browser.
+        </p>
+      )}
 
       <button
         type="submit"
-        disabled={pending}
-        aria-disabled={pending}
+        disabled={blocked}
+        aria-disabled={blocked}
         className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {pending && (
+        {(pending || check === "pending") && (
           <span
             aria-hidden
             className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
           />
         )}
-        {pending ? "Submitting…" : "Submit request"}
+        {pending
+          ? "Submitting…"
+          : check === "pending"
+            ? "Verifying you're human…"
+            : "Submit request"}
       </button>
     </form>
   );
