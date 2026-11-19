@@ -31,7 +31,7 @@ export function Turnstile({
   onStatus,
 }: {
   siteKey: string;
-  onStatus: (status: TurnstileStatus) => void;
+  onStatus: (status: TurnstileStatus, errorCode?: string) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
@@ -57,7 +57,7 @@ export function Turnstile({
         // Codes: https://developers.cloudflare.com/turnstile/troubleshooting/client-side-errors/error-codes/
         // 110200 = this hostname isn't allowed for the site key.
         console.error(`[turnstile] error ${code}`);
-        onStatusRef.current("error");
+        onStatusRef.current("error", String(code));
       },
     });
   }, [siteKey]);
@@ -79,7 +79,7 @@ export function Turnstile({
         onReady={render}
         onError={() => {
           console.error("[turnstile] script failed to load (blocked by an extension or network?)");
-          onStatusRef.current("error");
+          onStatusRef.current("error", "script-blocked");
         }}
       />
       <div ref={container} />

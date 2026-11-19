@@ -41,6 +41,11 @@ export function TicketForm({
   const [check, setCheck] = useState<TurnstileStatus>(
     turnstileSiteKey ? "pending" : "ready",
   );
+  const [checkError, setCheckError] = useState<string>();
+  const onCheckStatus = (status: TurnstileStatus, errorCode?: string) => {
+    setCheck(status);
+    setCheckError(errorCode);
+  };
   const blocked = pending || check !== "ready";
 
   if (state.status === "success") {
@@ -162,12 +167,13 @@ export function TicketForm({
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      {turnstileSiteKey && <Turnstile siteKey={turnstileSiteKey} onStatus={setCheck} />}
+      {turnstileSiteKey && <Turnstile siteKey={turnstileSiteKey} onStatus={onCheckStatus} />}
 
       {check === "error" && (
         <p role="alert" className="text-sm text-red-600">
           The security check couldn&apos;t load. Please refresh the page and try again. If it
-          keeps happening, try turning off ad blockers or using another browser.
+          keeps happening, try turning off ad blockers or VPNs, or use another browser.
+          {checkError && <span className="text-red-400"> (Code: {checkError})</span>}
         </p>
       )}
 
