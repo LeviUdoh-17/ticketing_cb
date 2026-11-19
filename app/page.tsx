@@ -24,12 +24,5 @@ async function SourcedForm({
   searchParams,
 }: Pick<PageProps<"/">, "searchParams">) {
   const { source } = await searchParams;
-  return (
-    <TicketForm
-      source={resolveSource(Array.isArray(source) ? source[0] : source)}
-      // Public by design (it's embedded in the page); read per request so it
-      // can be set on the host without rebuilding.
-      turnstileSiteKey={process.env.TURNSTILE_SITE_KEY || undefined}
-    />
-  );
+  return <TicketForm source={resolveSource(Array.isArray(source) ? source[0] : source)} />;
 }

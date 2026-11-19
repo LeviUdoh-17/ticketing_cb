@@ -3,7 +3,6 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 import { checkRateLimits } from "@/lib/rate-limit";
-import { verifyTurnstile } from "@/lib/turnstile";
 import { ticketSchema, type TicketField } from "@/lib/validation";
 import { createTicket } from "@/lib/zoho/tickets";
 
@@ -61,20 +60,7 @@ export async function createTicketAction(
   try {
     const ip = clientIp(await headers());
 
-    // 3. Bot check (Cloudflare Turnstile).
-    const human = await verifyTurnstile(
-      String(formData.get("cf-turnstile-response") ?? ""),
-      ip,
-    );
-    if (human !== "ok") {
-      return fail(
-        human === "missing"
-          ? "Please wait for the security check to finish, then submit again."
-          : "The security check failed. Please try again.",
-      );
-    }
-
-    // 4. Rate limits (per IP, per email, and a daily cap on the whole form).
+    // 3. Rate limits (per IP, per email, and a daily cap on the whole form).
     const limit = await checkRateLimits(ip ?? "unknown", parsed.data.email);
     if (!limit.ok) {
       console.warn(`[create-ticket] rate limited (${limit.rule})`);
@@ -85,7 +71,7 @@ export async function createTicketAction(
       );
     }
 
-    // 5. Create the ticket in Zoho.
+    // 4. Create the ticket in Zoho.
     const ticket = await createTicket(parsed.data);
     return { status: "success", ticketNumber: ticket.ticketNumber };
   } catch (err) {
@@ -97,7 +83,7 @@ export async function createTicketAction(
 
 // The host (Vercel, Netlify, Render, a reverse proxy…) must set these headers
 // itself. If requests reach the app directly, a client could forge them and
-// dodge the per-IP limit, though Turnstile and the other limits still apply.
+// dodge the per-IP limit, though the per-email and daily limits still apply.
 function clientIp(h: Headers): string | undefined {
   return (
     h.get("x-real-ip")?.trim() ||

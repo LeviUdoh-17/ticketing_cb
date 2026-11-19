@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import {
   createTicketAction,
   type CreateTicketState,
@@ -13,7 +13,6 @@ import {
   type Source,
   type TicketField,
 } from "@/lib/validation";
-import { Turnstile, type TurnstileStatus } from "./Turnstile";
 
 const initialState: CreateTicketState = { status: "idle" };
 
@@ -23,30 +22,11 @@ const inputClass =
   "aria-[invalid=true]:border-red-500 aria-[invalid=true]:focus:ring-red-500/30 " +
   "dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100";
 
-// turnstileSiteKey is read on the server at request time (not inlined at build
-// like NEXT_PUBLIC_ vars). When unset (local dev only), the widget is skipped
-// and the server skips verification too.
-export function TicketForm({
-  source,
-  turnstileSiteKey,
-}: {
-  source: Source;
-  turnstileSiteKey?: string;
-}) {
+export function TicketForm({ source }: { source: Source }) {
   const [state, formAction, pending] = useActionState(
     createTicketAction,
     initialState,
   );
-  // Without a site key (local dev) there's no widget, so nothing to wait for.
-  const [check, setCheck] = useState<TurnstileStatus>(
-    turnstileSiteKey ? "pending" : "ready",
-  );
-  const [checkError, setCheckError] = useState<string>();
-  const onCheckStatus = (status: TurnstileStatus, errorCode?: string) => {
-    setCheck(status);
-    setCheckError(errorCode);
-  };
-  const blocked = pending || check !== "ready";
 
   if (state.status === "success") {
     return (
@@ -167,33 +147,19 @@ export function TicketForm({
         <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
       </div>
 
-      {turnstileSiteKey && <Turnstile siteKey={turnstileSiteKey} onStatus={onCheckStatus} />}
-
-      {check === "error" && (
-        <p role="alert" className="text-sm text-red-600">
-          The security check couldn&apos;t load. Please refresh the page and try again. If it
-          keeps happening, try turning off ad blockers or VPNs, or use another browser.
-          {checkError && <span className="text-red-400"> (Code: {checkError})</span>}
-        </p>
-      )}
-
       <button
         type="submit"
-        disabled={blocked}
-        aria-disabled={blocked}
+        disabled={pending}
+        aria-disabled={pending}
         className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
       >
-        {(pending || check === "pending") && (
+        {pending && (
           <span
             aria-hidden
             className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"
           />
         )}
-        {pending
-          ? "Submitting…"
-          : check === "pending"
-            ? "Verifying you're human…"
-            : "Submit request"}
+        {pending ? "Submitting…" : "Submit request"}
       </button>
     </form>
   );

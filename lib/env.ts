@@ -1,8 +1,6 @@
 import "server-only";
 import { z } from "zod";
 
-const isProduction = process.env.NODE_ENV === "production";
-
 const envSchema = z
   .object({
     ZOHO_DC: z
@@ -16,10 +14,6 @@ const envSchema = z
     ZOHO_TECH_DEPARTMENT_ID: z.string().min(1),
     ZOHO_SOURCE_FIELD: z.string().min(1).default("cf_source"),
 
-    // Spam protection. Required in production (see the refine below).
-    TURNSTILE_SECRET_KEY: z.string().optional(),
-    TURNSTILE_SITE_KEY: z.string().optional(),
-
     // Shared rate-limit store. Without it, limits are kept in memory, which
     // only works when the app runs as a single long-lived server.
     UPSTASH_REDIS_REST_URL: z.url().optional(),
@@ -31,14 +25,6 @@ const envSchema = z
     RESEND_API_KEY: z.string().optional(),
   })
   .superRefine((e, ctx) => {
-    // Fail closed: never run a public form in production without bot checks.
-    if (isProduction && (!e.TURNSTILE_SECRET_KEY || !e.TURNSTILE_SITE_KEY)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["TURNSTILE_SECRET_KEY"],
-        message: "Turnstile keys are required in production",
-      });
-    }
     if (!!e.UPSTASH_REDIS_REST_URL !== !!e.UPSTASH_REDIS_REST_TOKEN) {
       ctx.addIssue({
         code: "custom",

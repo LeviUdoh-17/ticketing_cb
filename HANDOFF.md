@@ -66,10 +66,6 @@ ZOHO_ORG_ID=
 ZOHO_TECH_DEPARTMENT_ID=
 ZOHO_SOURCE_FIELD=cf_source    # API name of the custom Source field
 
-# Spam protection: required in production (the app refuses submissions without them)
-TURNSTILE_SECRET_KEY=
-TURNSTILE_SITE_KEY=            # read per request on the server, so no rebuild needed
-
 # Rate-limit store: required on serverless hosts, optional on a single server
 UPSTASH_REDIS_REST_URL=
 UPSTASH_REDIS_REST_TOKEN=
@@ -85,9 +81,10 @@ The Server Action is a public POST endpoint (callable without the form), so ever
 
 1. **Honeypot** field `website`: hidden from people; bots that fill it are rejected.
 2. **Field validation** (Zod).
-3. **Cloudflare Turnstile**: token verified with Cloudflare, bound to action `create-ticket`. Fails closed on errors.
-4. **Rate limits** (`lib/rate-limit.ts`): 5/hour per IP, 3/hour per email (stops the form being used to flood someone's inbox with Zoho emails), `TICKETS_DAILY_LIMIT`/day overall (protects the shared Zoho quota). IPs and emails are hashed before storage. Fails open if Upstash is down (Turnstile still applies).
-5. **Zoho call**, with timeouts. Raw Zoho errors are logged, never returned.
+3. **Rate limits** (`lib/rate-limit.ts`): 5/hour per IP, 3/hour per email (stops the form being used to flood someone's inbox with Zoho emails), `TICKETS_DAILY_LIMIT`/day overall (protects the shared Zoho quota). IPs and emails are hashed before storage. Fails open if Upstash is down.
+4. **Zoho call**, with timeouts. Raw Zoho errors are logged, never returned.
+
+**Cloudflare Turnstile is parked on the `feature/turnstile` branch** (removed from `main` on 2026-11-19). On the live site every challenge failed with client errors 300010/300030 on all devices tested, and 0 siteverify calls reached Cloudflare. Before merging it back: find the cause (check the widget settings and that Vercel's Production `TURNSTILE_SECRET_KEY` is the real secret, not the `1x000…` test one), and add the Cloudflare domains back to the CSP. Until then the form relies on the honeypot and rate limits, so **Upstash must be connected on Vercel** or the rate limits don't hold.
 
 Also: built-in Server Action origin check (CSRF), 100kb request body limit, security headers + CSP in `next.config.ts` (page can't be embedded in iframes; change `frame-ancestors` if a platform ever needs to embed it), HTML-escaped descriptions.
 
@@ -98,13 +95,11 @@ Client IP comes from `x-real-ip` / `x-forwarded-for`, which the host must set (V
 ```
 app/
   page.tsx                 # the form page
-  actions/create-ticket.ts # Server Action: honeypot → validate → Turnstile → rate limit → Zoho
+  actions/create-ticket.ts # Server Action: honeypot → validate → rate limit → Zoho
 components/
   TicketForm.tsx           # client component, Tailwind-styled
-  Turnstile.tsx            # Cloudflare Turnstile widget (explicit render)
 lib/
   env.ts                   # validates env vars with Zod
-  turnstile.ts             # server-side token verification
   rate-limit.ts            # per-IP / per-email / daily limits (Upstash or in-memory)
   zoho/auth.ts             # getAccessToken() with in-memory cache
   zoho/tickets.ts          # createTicket()
@@ -121,7 +116,7 @@ lib/
 6. ✅ `components/TicketForm.tsx`: accessible form, inline errors, pending state, success state with ticket number, `useActionState`.
 7. ✅ `app/actions/create-ticket.ts`: validate, call `createTicket`, return field errors or `{ ticketNumber }`. Never return raw Zoho errors; log server-side.
 8. ✅ Source platform: a visible **Platform** dropdown on the form (allowlist in `lib/validation.ts`, default **Career Bridge**). `?source=<slug>` preselects it. Zoho's Source field receives the label (e.g. `Career Bridge`).
-9. ✅ Spam protection: Cloudflare Turnstile (verify server-side) + rate limits + honeypot + security headers (see "Security model"). Remaining: real Turnstile keys and Upstash on the host. **Required before launch:** the public form writes into a paid shared org, so spam would flood other teams' queues and use up the shared API quota.
+9. 🟡 Spam protection: rate limits + honeypot + security headers (see "Security model"). Turnstile is parked on `feature/turnstile` until its live failures are fixed. Remaining: Upstash on Vercel. **Required before launch:** the public form writes into a paid shared org, so spam would flood other teams' queues and use up the shared API quota.
 10. ⬜ Confirmation email: EITHER Zoho Desk's automatic acknowledgement (or a Zoho Workflow email alert on ticket create) OR a branded Resend email (then disable Zoho's). Never both. Leaning: Zoho.
 
 ## Gotchas

@@ -3,16 +3,15 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === "development";
 
 // No nonces: they need fully dynamic rendering, which conflicts with
-// cacheComponents / partial prerendering. Turnstile needs its script and
-// iframe from challenges.cloudflare.com.
+// cacheComponents / partial prerendering.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' blob: data:",
   "font-src 'self'",
-  "connect-src 'self' https://challenges.cloudflare.com",
-  "frame-src https://challenges.cloudflare.com",
+  "connect-src 'self'",
+  "frame-src 'none'",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

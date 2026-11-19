@@ -45,8 +45,8 @@ async function hit(rule: Rule, id: string): Promise<number> {
     try {
       return await hitUpstash(UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN, key, ttlSeconds);
     } catch (err) {
-      // Fail open on store outages: Turnstile still guards the form, and we'd
-      // rather not block every real user because Redis is down.
+      // Fail open on store outages: we'd rather not block every real user
+      // because Redis is down. (The honeypot still applies.)
       console.error("[rate-limit] store error, allowing request", err);
       return 0;
     }
